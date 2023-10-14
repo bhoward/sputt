@@ -5,7 +5,7 @@ import sputt.Vectors.Vect2D
 import sputt.Transforms.Transform
 
 trait Wall:
-  def collide(p0: Point2D, p1: Point2D, v: Vect2D): (Point2D, Vect2D, Boolean)
+  def collide(p0: Point2D, p1: Point2D, v: Vect2D): (Point2D, Vect2D, Double)
   def transform(xform: Transforms.Transform): Wall
 end Wall
 
@@ -18,7 +18,7 @@ case class LineWall(p: Point2D, q: Point2D) extends Wall:
       p0: Point2D,
       p1: Point2D,
       v: Vect2D
-  ): (Point2D, Vect2D, Boolean) = {
+  ): (Point2D, Vect2D, Double) = {
     val dp = p1 - p0
     val dw = w1 - w0
     if ((dp cross dw) > 0) {
@@ -27,17 +27,15 @@ case class LineWall(p: Point2D, q: Point2D) extends Wall:
         val u = intersect(w0, w1, p0, p1)
         if (0 <= u && u <= 1) {
           val p = p0 + t * dp
-          val pRest = p1 - p
           val n = dw.unitNormal
-          val rRest = pRest - 2 * (pRest dot n) * n
           val rv = v - 2 * (v dot n) * n
 
-          return (p + rRest, rv, true)
+          return (p, rv, t)
         }
       }
     }
 
-    (p1, v, false)
+    (p1, v, 1)
   }
 
   def transform(xform: Transform): Wall = LineWall(xform(p), xform(q))
@@ -59,18 +57,16 @@ case class PointWall(p: Point2D) extends Wall:
       p0: Point2D,
       p1: Point2D,
       v: Vect2D
-  ): (Point2D, Vect2D, Boolean) = {
+  ): (Point2D, Vect2D, Double) = {
     if (p.distToSegment(p0, p1) <= Config.BALL_RADIUS) {
       val t = intersectCircle(p0, p1, p, Config.BALL_RADIUS)
       val q = p0 + t * (p1 - p0)
-      val pRest = p1 - q
       val n = (q - p).unit
-      val rRest = pRest - 2 * (pRest dot n) * n
       val rv = v - 2 * (v dot n) * n
 
-      (q + rRest, rv, true)
+      (q, rv, t)
     } else {
-      (p1, v, false)
+      (p1, v, 1)
     }
   }
 
